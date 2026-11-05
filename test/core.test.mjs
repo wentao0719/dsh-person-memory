@@ -355,3 +355,13 @@ test('relation graph traverses depth from center', (t) => {
   assert.equal(two.nodes.length, 3);
   assert.equal(two.edges.length, 2);
 });
+
+test('pruneEvidence removes only old metadata', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  const item = core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：A' });
+  core.attachEvidence(db, { personId: 'urn:person:qq:9', itemId: item.item.id, kind: 'image', ref: 'old' });
+  db.prepare('UPDATE memory_evidence SET created_at=?').run(Date.now() - 90 * 24 * 3600 * 1000);
+  assert.equal(core.pruneEvidence(db, { olderThanDays: 30 }).deleted, 1);
+  assert.equal(core.listEvidence(db, 'urn:person:qq:9').length, 0);
+});
