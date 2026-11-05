@@ -1,0 +1,26 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0] - unreleased
+
+### Added
+
+- Per-person long-term memory store (SQLite, WAL, versioned migrations).
+- Canonical person registry with aliases and external ids.
+- Atomic memory items: kind, confidence, importance, visibility, public audiences,
+  validity window, layer, status, superseded_by.
+- Admission rules: whitespace-insensitive dedupe, sensitive-content rejection,
+  explicit supersede, temporal supersede with `core` protection.
+- Retrieval: keyword + importance + recency/usage scoring, top-k and char budgets,
+  group-only-public visibility with audience scoping.
+- Soft-forget with audit trail.
+- DSH plugin glue: `remember_person`, `recall_person`, `forget_person`,
+  `memory_status` tools; stable profile system section + dynamic recall context;
+  `ctx.personMemory` service for adapters.
+- Framework-free `./core` export for other runtimes.
+- Unit tests for identity resolution, dedupe, sensitivity, visibility, supersede,
+  forget/audit, ranking, budgets, and migration idempotency.
