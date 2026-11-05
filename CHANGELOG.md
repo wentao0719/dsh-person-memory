@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.13] - 2026-11-06
+
+### Added
+
+- Process metrics for recall/remember (latency, candidates, vectors), no text.
+- Optional JSONL sink via plugin `metricsPath`.
+- `scripts/metrics-summary.mjs` prints count/p50/p95.
+- 29 tests.
+
 ## [0.1.12] - 2026-11-06
 
 ### Added

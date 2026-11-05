@@ -292,3 +292,16 @@ test('pruneAudit removes only old audit rows', (t) => {
   assert.ok(result.deleted >= 1);
   assert.equal(core.auditLog(db, { personId: 'urn:person:qq:9' }).length, 0);
 });
+
+test('metrics record recall without person text', async (t) => {
+  const { metricsSnapshot, resetMetrics } = await import('../lib/metrics.js');
+  resetMetrics();
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：A' });
+  core.recall(db, { personId: 'urn:person:qq:9', queryText: 'A', audience: 'private' });
+  const snap = metricsSnapshot();
+  assert.equal(snap.totals.recall, 1);
+  assert.ok(snap.recent.some((event) => event.name === 'recall' && event.ms >= 0));
+  assert.equal(JSON.stringify(snap).includes('住在'), false);
+});
