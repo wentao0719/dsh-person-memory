@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.19] - 2026-11-06
+
+### Added
+
+- `metrics-alert`: recall p95 and write error-rate thresholds; non-zero exit on violation.
+- `rotate-metrics`: size-based JSONL rotation with backup retention.
+- Smoke-tested threshold failure and rotation.
+
 ## [0.1.18] - 2026-11-06
 
 ### Added
