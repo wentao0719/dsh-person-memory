@@ -1,6 +1,6 @@
 {
   "name": "dsh-person-memory",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Channel-agnostic per-person long-term memory plugin for DeepSeek Harness agents: isolated, retrievable, forgettable, auditable.",
   "type": "module",
   "main": "lib/index.js",
@@ -10,6 +10,7 @@
   },
   "files": [
     "lib",
+    "scripts",
     "README.md",
     "DESIGN.md",
     "CHANGELOG.md"
@@ -40,5 +41,9 @@
   "bugs": {
     "url": "https://github.com/wentao0719/dsh-person-memory/issues"
   },
-  "author": "wentao0719"
+  "author": "wentao0719",
+  "bin": {
+    "dsh-person-memory-admin": "scripts/memory-admin.mjs",
+    "dsh-person-memory-ui": "scripts/memory-ui.mjs"
+  }
 }

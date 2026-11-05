@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-11-06
+
+### Added
+
+- `exportPerson` / `deletePerson` core APIs with atomic hard delete.
+- `memory-admin` CLI: stats/list/show/export/forget/delete/audit.
+- Local `memory-ui` (127.0.0.1:8092, token-protected): browse, export,
+  soft-forget, hard-delete.
+- Export/delete tests; 17 tests total.
+
 ## [0.1.3] - 2026-11-06
 
 ### Fixed

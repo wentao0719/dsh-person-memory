@@ -134,3 +134,27 @@ test('openStore is idempotent (migration re-run)', (t) => {
   core.remember(db, { personId: 'p1', text: '她能跑十公里', kind: 'fact' });
   assert.equal(core.stats(db).activeItems, 1);
 });
+
+test('exportPerson returns a complete, self-contained bundle', (t) => {
+  const db = makeStore(t);
+  const person = core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  core.remember(db, { personId: person.id, text: '喜欢茶', kind: 'preference' });
+  const bundle = core.exportPerson(db, person.id);
+  assert.equal(bundle.format, 'dsh-person-memory-export');
+  assert.equal(bundle.person.id, person.id);
+  assert.equal(bundle.items.length, 1);
+  assert.ok(bundle.audit.length >= 1);
+  assert.equal(core.exportPerson(db, 'missing'), null);
+});
+
+test('deletePerson removes person, items and audit atomically', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  core.remember(db, { personId: 'urn:person:qq:9', text: '喜欢茶' });
+  const result = core.deletePerson(db, 'urn:person:qq:9');
+  assert.equal(result.deleted, true);
+  assert.equal(core.getPerson(db, 'urn:person:qq:9'), null);
+  assert.equal(core.listItems(db, 'urn:person:qq:9', { statuses: ['active', 'superseded', 'forgotten'] }).length, 0);
+  assert.equal(core.auditLog(db, { personId: 'urn:person:qq:9' }).length, 0);
+  assert.equal(core.deletePerson(db, 'urn:person:qq:9').deleted, false);
+});

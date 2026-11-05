@@ -117,3 +117,28 @@ suite.
 ## License
 
 Apache-2.0
+
+## Admin CLI
+
+```bash
+node scripts/memory-admin.mjs stats
+node scripts/memory-admin.mjs list
+node scripts/memory-admin.mjs show urn:person:qq:514557769
+node scripts/memory-admin.mjs export urn:person:qq:514557769 out.json
+node scripts/memory-admin.mjs forget urn:person:qq:514557769 9
+node scripts/memory-admin.mjs delete urn:person:qq:514557769 --confirm
+```
+
+`delete` is a hard delete of the person, all memory items and their audit rows.
+It is irreversible.
+
+## Local memory UI
+
+```bash
+MEMORY_UI_TOKEN_FILE=./state/run/memory-ui.token node scripts/memory-ui.mjs
+# open http://127.0.0.1:8092
+```
+
+Bind is fixed to `127.0.0.1`; every `/api/*` request requires
+`x-memory-token` (or `?token=`). The page supports browse, export, soft-forget
+and hard-delete. Do not expose this port to a network.
