@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pending relation candidates table and approve/reject APIs.
 - CLI `relation-pending`, `relation-approve`, `relation-reject`.
 - AstrBot queues explicit relation statements as pending; never auto-writes.
-- 39 tests.
+- 40 tests.
 
 ## [0.1.26] - 2026-11-06
 
