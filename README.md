@@ -142,3 +142,15 @@ MEMORY_UI_TOKEN_FILE=./state/run/memory-ui.token node scripts/memory-ui.mjs
 Bind is fixed to `127.0.0.1`; every `/api/*` request requires
 `x-memory-token` (or `?token=`). The page supports browse, export, soft-forget
 and hard-delete. Do not expose this port to a network.
+
+## Local hybrid recall
+
+The default embedding provider is a local feature-hash embedder:
+
+- 256 dimensions;
+- no network, no model download, no text leaves the machine;
+- deterministic, so it is safe for tests and migrations;
+- RRF combines keyword rank and cosine rank (k=60).
+
+It is a lexical baseline, not a semantic model. External embedding providers
+are not enabled by default and require an explicit opt-in.

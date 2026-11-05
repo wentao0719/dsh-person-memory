@@ -194,3 +194,12 @@ test('recall uses FTS candidates for long queries and falls back for short ones'
   const short = core.recall(db, { personId: 'urn:person:qq:9', queryText: '咖啡', audience: 'private' });
   assert.ok(short.some((item) => item.text === '喜欢：手冲咖啡'));
 });
+
+test('local embedding is deterministic and cosine-safe', async (t) => {
+  const { embedText, cosine } = await import('../lib/embedding.js');
+  const a = embedText('喜欢：手冲咖啡');
+  const b = embedText('喜欢：手冲咖啡');
+  assert.deepEqual(a, b);
+  assert.ok(cosine(a, b) > 0.999);
+  assert.equal(a.length, 256);
+});
