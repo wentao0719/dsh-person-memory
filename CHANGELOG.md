@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2026-11-06
+
+### Changed
+
+- Recall narrows candidates through the FTS5 index for queries of 3+ chars,
+  falling back to the full active set on FTS miss/error. Short CJK queries
+  still use the in-memory scorer.
+- Selected-item `last_used_at` updates are batched into one statement.
+- Rebuild FTS on open if the index is empty but items exist.
+- 20 tests.
+
 ## [0.1.5] - 2026-11-06
 
 ### Added

@@ -183,3 +183,14 @@ test('active items are capped per person without touching core', (t) => {
   const active = core.listItems(db, 'urn:person:qq:9');
   assert.equal(active.length, 10);
 });
+
+test('recall uses FTS candidates for long queries and falls back for short ones', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  core.remember(db, { personId: 'urn:person:qq:9', kind: 'preference', text: '喜欢：手冲咖啡' });
+  core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：温哥华' });
+  const long = core.recall(db, { personId: 'urn:person:qq:9', queryText: '手冲咖啡', audience: 'private' });
+  assert.equal(long[0].text, '喜欢：手冲咖啡');
+  const short = core.recall(db, { personId: 'urn:person:qq:9', queryText: '咖啡', audience: 'private' });
+  assert.ok(short.some((item) => item.text === '喜欢：手冲咖啡'));
+});
