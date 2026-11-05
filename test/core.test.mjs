@@ -402,3 +402,15 @@ test('evidence can carry OCR text', (t) => {
   core.attachEvidence(db, { personId: 'urn:person:qq:9', itemId: item.item.id, kind: 'image', ref: 'x', ocrText: 'Hello 2026' });
   assert.equal(core.listEvidence(db, 'urn:person:qq:9')[0].ocr_text, 'Hello 2026');
 });
+
+test('evidence candidates require explicit item approval', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  const item = core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：A' });
+  const q = core.queueEvidenceCandidate(db, { personId: 'urn:person:qq:9', kind: 'image', sha256: 'b'.repeat(64), size: 10, ref: 'x' });
+  assert.equal(q.ok, true);
+  assert.equal(core.listEvidence(db, 'urn:person:qq:9').length, 0);
+  assert.equal(core.approveEvidenceCandidate(db, q.id, { itemId: item.item.id }).ok, true);
+  assert.equal(core.listEvidence(db, 'urn:person:qq:9').length, 1);
+  assert.equal(core.listEvidenceCandidates(db).length, 0);
+});
