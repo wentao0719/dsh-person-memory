@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.26] - 2026-11-06
+
+### Added
+
+- Merge preview token (10 min) with item counts.
+- UI/CLI preview before merge; token validated and single-use.
+- 38 tests; preview/merge smoke.
+
 ## [0.1.25] - 2026-11-06
 
 ### Added

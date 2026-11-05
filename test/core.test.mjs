@@ -365,3 +365,18 @@ test('pruneEvidence removes only old metadata', (t) => {
   assert.equal(core.pruneEvidence(db, { olderThanDays: 30 }).deleted, 1);
   assert.equal(core.listEvidence(db, 'urn:person:qq:9').length, 0);
 });
+
+test('merge preview token is required when supplied and expires', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:1', displayName: 'A' });
+  core.ensurePerson(db, { id: 'urn:person:qq:2', displayName: 'B' });
+  const preview = core.previewMerge(db, { primaryPersonId: 'urn:person:qq:1', mergedPersonId: 'urn:person:qq:2' });
+  assert.equal(preview.ok, true);
+  assert.equal(preview.primaryItems, 0);
+  const bad = core.mergePersons(db, { primaryPersonId: 'urn:person:qq:1', mergedPersonId: 'urn:person:qq:2', consent: true, previewToken: 'nope' });
+  assert.equal(bad.reason, 'preview-invalid');
+  const merged = core.mergePersons(db, { primaryPersonId: 'urn:person:qq:1', mergedPersonId: 'urn:person:qq:2', consent: true, previewToken: preview.token });
+  assert.equal(merged.ok, true);
+  const again = core.mergePersons(db, { primaryPersonId: 'urn:person:qq:1', mergedPersonId: 'urn:person:qq:2', consent: true, previewToken: preview.token });
+  assert.equal(again.ok, false);
+});

@@ -3,7 +3,7 @@ import http from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, recallTrace, listRelations, extractRelationCandidates, upsertRelation, applyFeedback, mergePersons, revertMerge, listMerges, relationGraph } from '../lib/core.js';
+import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, recallTrace, listRelations, extractRelationCandidates, upsertRelation, applyFeedback, mergePersons, previewMerge, revertMerge, listMerges, relationGraph } from '../lib/core.js';
 
 const ROOT = '/Users/wentaohu/dsh-bootstrap-20261102';
 const dbPath = process.env.PERSON_MEMORY_DB || `${ROOT}/state/person-memory.sqlite`;
@@ -61,7 +61,7 @@ async function rels(id){try{const v=await api('/api/relations?id='+encodeURIComp
 async function relationCandidates(){const text=prompt('输入明确关系句，例如 A是B的朋友');if(!text)return;try{const v=await api('/api/relation-candidates?text='+encodeURIComponent(text));$('#out').textContent=JSON.stringify(v,null,2);}catch(e){$('#out').textContent=e.message}}
 async function addRelation(){const from=prompt('from person id');const to=prompt('to person id');const kind=prompt('kind (friend/partner/colleague/family/roommate/classmate)');if(!from||!to||!kind)return;try{$('#out').textContent=JSON.stringify(await api('/api/relation-add',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({from,to,kind})}),null,2);}catch(e){$('#out').textContent=e.message}}
 async function feedback(){const person=prompt('person id');if(!person)return;const id=prompt('item id');if(!id)return;const action=prompt('confirm|deny|irrelevant|correct');if(!action)return;const text=action==='correct'?(prompt('新文本')||''):undefined;try{$('#out').textContent=JSON.stringify(await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({person,id:Number(id),action,text})}),null,2);}catch(e){$('#out').textContent=e.message}}
-async function merge(){const primary=prompt('primary person id');if(!primary)return;const merged=prompt('merged person id');if(!merged)return;const c=prompt('输入 MERGE 确认');if(c!=='MERGE')return;try{$('#out').textContent=JSON.stringify(await api('/api/merge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({primary,merged,confirm:'MERGE'})}),null,2);}catch(e){$('#out').textContent=e.message}}
+async function merge(){const primary=prompt('primary person id');if(!primary)return;const merged=prompt('merged person id');if(!merged)return;try{const preview=await api('/api/merge-preview',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({primary,merged})});$('#out').textContent=JSON.stringify(preview,null,2);if(!preview.ok)return;const token=prompt('预览 token（10 分钟内有效）');if(!token)return;const c=prompt('输入 MERGE 确认');if(c!=='MERGE')return;$('#out').textContent=JSON.stringify(await api('/api/merge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({primary,merged,confirm:'MERGE',previewToken:token})}),null,2);}catch(e){$('#out').textContent=e.message}}
 async function unmerge(){const id=prompt('merge id');if(!id)return;try{$('#out').textContent=JSON.stringify(await api('/api/unmerge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:Number(id)})}),null,2);}catch(e){$('#out').textContent=e.message}}
 async function graph(){const id=prompt('中心 person id（留空显示全部）')||'';try{const v=await api('/api/graph?id='+encodeURIComponent(id)+'&depth=2');$('#out').textContent=JSON.stringify(v,null,2);renderGraph(v);}catch(e){$('#out').textContent=e.message}}
 function renderGraph(v){const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));const w=760,h=460,cx=w/2,cy=h/2,r=Math.min(cx,cy)-60;const n=v.nodes.length||1;const pos=new Map();v.nodes.forEach((node,i)=>{const a=(Math.PI*2*i)/n-Math.PI/2;pos.set(node.id,{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)});});let svg='<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" style="background:#fafafa;border-radius:8px">';for(const e of v.edges){const a=pos.get(e.from),b=pos.get(e.to);if(a&&b)svg+='<line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="#aaa"/><text x="'+((a.x+b.x)/2)+'" y="'+((a.y+b.y)/2)+'" font-size="10" fill="#666">'+esc(e.kind)+'</text>';}for(const node of v.nodes){const pnt=pos.get(node.id);svg+='<circle cx="'+pnt.x+'" cy="'+pnt.y+'" r="18" fill="#4a90e2"/><text x="'+pnt.x+'" y="'+(pnt.y+4)+'" text-anchor="middle" font-size="10" fill="#fff">'+esc(node.name).slice(0,8)+'</text>';}svg+='</svg>';$('#graph').innerHTML=svg;}
@@ -142,10 +142,14 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'GET' && url.pathname === '/api/merges') {
         return send(res, 200, listMerges(db, url.searchParams.get('id') || ''));
       }
+      if (req.method === 'POST' && url.pathname === '/api/merge-preview') {
+        const b = await body(req);
+        return send(res, 200, previewMerge(db, { primaryPersonId: String(b.primary || ''), mergedPersonId: String(b.merged || '') }));
+      }
       if (req.method === 'POST' && url.pathname === '/api/merge') {
         const b = await body(req);
         if (b.confirm !== 'MERGE') return send(res, 400, { error: 'confirm required' });
-        return send(res, 200, mergePersons(db, { primaryPersonId: String(b.primary || ''), mergedPersonId: String(b.merged || ''), consent: true, note: b.note, actor: 'memory-ui' }));
+        return send(res, 200, mergePersons(db, { primaryPersonId: String(b.primary || ''), mergedPersonId: String(b.merged || ''), consent: true, note: b.note, previewToken: b.previewToken, actor: 'memory-ui' }));
       }
       if (req.method === 'POST' && url.pathname === '/api/unmerge') {
         const b = await body(req);

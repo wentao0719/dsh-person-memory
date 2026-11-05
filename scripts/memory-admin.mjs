@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, auditLog, listRelations, applyFeedback, decayMemory, consolidatePerson, listFeedback, mergePersons, revertMerge, listMerges, exportAll, pruneAudit, recallTrace, attachEvidence, listEvidence, extractRelationCandidates, upsertRelation, pruneEvidence } from '../lib/core.js';
+import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, auditLog, listRelations, applyFeedback, decayMemory, consolidatePerson, listFeedback, mergePersons, previewMerge, revertMerge, listMerges, exportAll, pruneAudit, recallTrace, attachEvidence, listEvidence, extractRelationCandidates, upsertRelation, pruneEvidence } from '../lib/core.js';
 import { writeFileSync } from 'node:fs';
 
 const args = process.argv.slice(2);
@@ -51,9 +51,13 @@ try {
     console.log(JSON.stringify(pruneAudit(db, { olderThanDays: Number(args[1] || 90) })));
   } else if (cmd === 'tombstones') {
     console.log(JSON.stringify(db.prepare('SELECT person_hash,deleted_at,reason FROM person_tombstones ORDER BY id').all(), null, 2));
+  } else if (cmd === 'merge-preview') {
+    console.log(JSON.stringify(previewMerge(db, { primaryPersonId: args[1], mergedPersonId: args[2] })));
   } else if (cmd === 'merge') {
     if (!args.includes('--confirm')) throw new Error('merge requires --confirm (consent)');
-    console.log(JSON.stringify(mergePersons(db, { primaryPersonId: args[1], mergedPersonId: args[2], consent: true, actor: 'admin-cli' })));
+    const index = args.indexOf('--preview');
+    const previewToken = index >= 0 ? args[index + 1] : undefined;
+    console.log(JSON.stringify(mergePersons(db, { primaryPersonId: args[1], mergedPersonId: args[2], consent: true, previewToken, actor: 'admin-cli' })));
   } else if (cmd === 'unmerge') {
     console.log(JSON.stringify(revertMerge(db, Number(args[1]), { actor: 'admin-cli' })));
   } else if (cmd === 'merges') {
@@ -71,7 +75,7 @@ try {
   } else if (cmd === 'audit') {
     console.log(JSON.stringify(auditLog(db, { personId: args[1], limit: Number(args[2] || 100) }), null, 2));
   } else {
-    console.error('usage: memory-admin.mjs stats|list|show <person>|prune-evidence [days]|export <person> [out]|trace <person> <query> [private|group] [k]|relation-candidates <text>|relation-add <from> <to> <kind> --confirm|evidence <person> [item]|evidence-add <person> <item> <kind> <ref> [sha256]|export-all [out]|prune-audit [days]|tombstones|relations <person> [asOfMs]|merge <primary> <merged> --confirm|unmerge <id>|merges <person>|feedback <person> <id> <confirm|deny|irrelevant|correct> [text]|feedback-list <person>|decay <person> [days]|consolidate <person>|forget <person> <id>|delete <person> --confirm|audit <person> [limit]');
+    console.error('usage: memory-admin.mjs stats|list|show <person>|prune-evidence [days]|export <person> [out]|trace <person> <query> [private|group] [k]|relation-candidates <text>|relation-add <from> <to> <kind> --confirm|evidence <person> [item]|evidence-add <person> <item> <kind> <ref> [sha256]|export-all [out]|prune-audit [days]|tombstones|relations <person> [asOfMs]|merge-preview <primary> <merged>|merge <primary> <merged> --confirm [--preview <token>]|unmerge <id>|merges <person>|feedback <person> <id> <confirm|deny|irrelevant|correct> [text]|feedback-list <person>|decay <person> [days]|consolidate <person>|forget <person> <id>|delete <person> --confirm|audit <person> [limit]');
     process.exit(2);
   }
 } finally {
