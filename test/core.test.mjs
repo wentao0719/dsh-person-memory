@@ -226,3 +226,31 @@ test('relations support as-of and deletion', (t) => {
   assert.equal(core.deleteRelation(db, rel.id), true);
   assert.equal(core.listRelations(db, 'urn:person:qq:1', { asOf: 2000 }).length, 0);
 });
+
+test('feedback confirms, denies and corrects memories', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  const a = core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：A' });
+  assert.equal(core.applyFeedback(db, { personId: 'urn:person:qq:9', itemId: a.item.id, action: 'confirm' }).ok, true);
+  assert.equal(core.applyFeedback(db, { personId: 'urn:person:qq:9', itemId: a.item.id, action: 'deny' }).ok, true);
+  assert.equal(core.listItems(db, 'urn:person:qq:9').length, 0);
+  const b = core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：B' });
+  const fixed = core.applyFeedback(db, { personId: 'urn:person:qq:9', itemId: b.item.id, action: 'correct', text: '住在：C' });
+  assert.equal(fixed.ok, true);
+  assert.equal(core.listItems(db, 'urn:person:qq:9')[0].text, '住在：C');
+});
+
+test('decay lowers old importance; consolidation removes exact duplicates', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  const item = core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：A', importance: 0.8 });
+  db.prepare('UPDATE memory_items SET updated_at=? WHERE id=?').run(Date.now() - 200 * 24 * 3600 * 1000, item.item.id);
+  const result = core.decayMemory(db, { personId: 'urn:person:qq:9', halfLifeDays: 90 });
+  assert.ok(result.changed >= 1);
+  assert.ok(core.listItems(db, 'urn:person:qq:9')[0].importance < 0.8);
+  db.prepare("INSERT INTO memory_items(person_id,kind,text,normalized_text,confidence,importance,visibility,public_audiences,layer,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?, 'active',?,?)")
+    .run('urn:person:qq:9', 'fact', '重复：A', '重复a', 0.7, 0.5, 'private', '[]', 'learned', Date.now(), Date.now());
+  db.prepare("INSERT INTO memory_items(person_id,kind,text,normalized_text,confidence,importance,visibility,public_audiences,layer,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?, 'active',?,?)")
+    .run('urn:person:qq:9', 'fact', '重复：A', '重复a', 0.7, 0.5, 'private', '[]', 'learned', Date.now(), Date.now());
+  assert.equal(core.consolidatePerson(db, { personId: 'urn:person:qq:9' }).merged, 1);
+});
