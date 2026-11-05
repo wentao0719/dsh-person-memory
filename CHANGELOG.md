@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.11] - 2026-11-06
+
+### Added
+
+- Non-identifying deletion tombstones (SHA-256 prefix).
+- `exportAll` bundle and `pruneAudit` retention helper.
+- CLI: `export-all`, `prune-audit`, `tombstones`.
+- 28 tests; compliance notes in `docs/COMPLIANCE.md`.
+
 ## [0.1.10] - 2026-11-06
 
 ### Added

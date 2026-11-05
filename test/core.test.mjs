@@ -268,3 +268,27 @@ test('person merge expands recall, requires consent and is reversible', (t) => {
   assert.equal(core.revertMerge(db, merged.id).ok, true);
   assert.equal(core.recall(db, { personId: 'urn:person:qq:1' }).length, 0);
 });
+
+test('hard delete writes a non-identifying tombstone and exportAll is complete', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：A' });
+  const result = core.deletePerson(db, 'urn:person:qq:9');
+  assert.equal(result.deleted, true);
+  assert.match(result.personHash, /^[a-f0-9]{32}$/);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM person_tombstones').get().n, 1);
+  const all = core.exportAll(db);
+  assert.equal(all.persons.length, 0);
+  assert.equal(all.items.length, 0);
+  assert.equal(all.tombstones.length, 1);
+});
+
+test('pruneAudit removes only old audit rows', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：A' });
+  db.prepare('UPDATE memory_audit SET at=?').run(Date.now() - 200 * 24 * 3600 * 1000);
+  const result = core.pruneAudit(db, { olderThanDays: 90 });
+  assert.ok(result.deleted >= 1);
+  assert.equal(core.auditLog(db, { personId: 'urn:person:qq:9' }).length, 0);
+});

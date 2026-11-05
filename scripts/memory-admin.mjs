@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, auditLog, listRelations, applyFeedback, decayMemory, consolidatePerson, listFeedback, mergePersons, revertMerge, listMerges } from '../lib/core.js';
+import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, auditLog, listRelations, applyFeedback, decayMemory, consolidatePerson, listFeedback, mergePersons, revertMerge, listMerges, exportAll, pruneAudit } from '../lib/core.js';
 import { writeFileSync } from 'node:fs';
 
 const args = process.argv.slice(2);
@@ -30,6 +30,14 @@ try {
   } else if (cmd === 'delete') {
     if (!args.includes('--confirm')) throw new Error('delete requires --confirm');
     console.log(JSON.stringify(deletePerson(db, args[1])));
+  } else if (cmd === 'export-all') {
+    const out = args[1] || 'person-memory-export-all.json';
+    writeFileSync(out, JSON.stringify(exportAll(db), null, 2), { mode: 0o600 });
+    console.log(out);
+  } else if (cmd === 'prune-audit') {
+    console.log(JSON.stringify(pruneAudit(db, { olderThanDays: Number(args[1] || 90) })));
+  } else if (cmd === 'tombstones') {
+    console.log(JSON.stringify(db.prepare('SELECT person_hash,deleted_at,reason FROM person_tombstones ORDER BY id').all(), null, 2));
   } else if (cmd === 'merge') {
     if (!args.includes('--confirm')) throw new Error('merge requires --confirm (consent)');
     console.log(JSON.stringify(mergePersons(db, { primaryPersonId: args[1], mergedPersonId: args[2], consent: true, actor: 'admin-cli' })));
@@ -50,7 +58,7 @@ try {
   } else if (cmd === 'audit') {
     console.log(JSON.stringify(auditLog(db, { personId: args[1], limit: Number(args[2] || 100) }), null, 2));
   } else {
-    console.error('usage: memory-admin.mjs stats|list|show <person>|export <person> [out]|relations <person> [asOfMs]|merge <primary> <merged> --confirm|unmerge <id>|merges <person>|feedback <person> <id> <confirm|deny|irrelevant|correct> [text]|feedback-list <person>|decay <person> [days]|consolidate <person>|forget <person> <id>|delete <person> --confirm|audit <person> [limit]');
+    console.error('usage: memory-admin.mjs stats|list|show <person>|export <person> [out]|export-all [out]|prune-audit [days]|tombstones|relations <person> [asOfMs]|merge <primary> <merged> --confirm|unmerge <id>|merges <person>|feedback <person> <id> <confirm|deny|irrelevant|correct> [text]|feedback-list <person>|decay <person> [days]|consolidate <person>|forget <person> <id>|delete <person> --confirm|audit <person> [limit]');
     process.exit(2);
   }
 } finally {
