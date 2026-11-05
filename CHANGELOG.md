@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.32] - 2026-11-06
+
+### Added
+
+- Owner-private diary tools `write_diary` / `read_diary`.
+- No schedule; the persona writes when she wants.
+- Markdown per day, append sections; 43 tests.
+- Diary prompt only mounted for owner private binding.
+
 ## [0.1.31] - 2026-11-06
 
 ### Added
