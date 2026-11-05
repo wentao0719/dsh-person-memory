@@ -316,3 +316,16 @@ test('recallTrace exposes score, source and visibility', (t) => {
   assert.equal(trace.items[0].sourceChannel, 'unit');
   assert.equal(typeof trace.items[0].score, 'number');
 });
+
+test('evidence metadata attaches to an item and is exported/deleted with person', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  const item = core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：A' });
+  const attached = core.attachEvidence(db, { personId: 'urn:person:qq:9', itemId: item.item.id, kind: 'image', mediaType: 'image/jpeg', sha256: 'a'.repeat(64), size: 123, ref: 'media/abc' });
+  assert.equal(attached.ok, true);
+  assert.equal(core.listEvidence(db, 'urn:person:qq:9', item.item.id).length, 1);
+  assert.equal(core.exportPerson(db, 'urn:person:qq:9').evidence.length, 1);
+  assert.equal(core.attachEvidence(db, { personId: 'urn:person:qq:9', itemId: item.item.id, kind: 'nope' }).ok, false);
+  core.deletePerson(db, 'urn:person:qq:9');
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM memory_evidence').get().n, 0);
+});
