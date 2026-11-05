@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.16] - 2026-11-06
+
+### Added
+
+- Embedding provider registry: local hash default; external OpenAI-compatible
+  skeleton behind explicit `allowExternal: true`.
+- External provider refuses construction without opt-in; no network in tests.
+- 3 provider tests; docs/EMBEDDING.md.
+
 ## [0.1.15] - 2026-11-06
 
 ### Added
