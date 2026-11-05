@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, auditLog, listRelations, applyFeedback, decayMemory, consolidatePerson, listFeedback, mergePersons, revertMerge, listMerges, exportAll, pruneAudit, recallTrace, attachEvidence, listEvidence } from '../lib/core.js';
+import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, auditLog, listRelations, applyFeedback, decayMemory, consolidatePerson, listFeedback, mergePersons, revertMerge, listMerges, exportAll, pruneAudit, recallTrace, attachEvidence, listEvidence, extractRelationCandidates, upsertRelation } from '../lib/core.js';
 import { writeFileSync } from 'node:fs';
 
 const args = process.argv.slice(2);
@@ -30,6 +30,11 @@ try {
   } else if (cmd === 'delete') {
     if (!args.includes('--confirm')) throw new Error('delete requires --confirm');
     console.log(JSON.stringify(deletePerson(db, args[1])));
+  } else if (cmd === 'relation-candidates') {
+    console.log(JSON.stringify(extractRelationCandidates(db, args.slice(1).join(' ')), null, 2));
+  } else if (cmd === 'relation-add') {
+    if (!args.includes('--confirm')) throw new Error('relation-add requires --confirm');
+    console.log(JSON.stringify(upsertRelation(db, { fromPersonId: args[1], toPersonId: args[2], kind: args[3], evidence: 'admin-cli' })));
   } else if (cmd === 'evidence') {
     console.log(JSON.stringify(listEvidence(db, args[1], args[2] ? Number(args[2]) : null), null, 2));
   } else if (cmd === 'evidence-add') {
@@ -64,7 +69,7 @@ try {
   } else if (cmd === 'audit') {
     console.log(JSON.stringify(auditLog(db, { personId: args[1], limit: Number(args[2] || 100) }), null, 2));
   } else {
-    console.error('usage: memory-admin.mjs stats|list|show <person>|export <person> [out]|trace <person> <query> [private|group] [k]|evidence <person> [item]|evidence-add <person> <item> <kind> <ref> [sha256]|export-all [out]|prune-audit [days]|tombstones|relations <person> [asOfMs]|merge <primary> <merged> --confirm|unmerge <id>|merges <person>|feedback <person> <id> <confirm|deny|irrelevant|correct> [text]|feedback-list <person>|decay <person> [days]|consolidate <person>|forget <person> <id>|delete <person> --confirm|audit <person> [limit]');
+    console.error('usage: memory-admin.mjs stats|list|show <person>|export <person> [out]|trace <person> <query> [private|group] [k]|relation-candidates <text>|relation-add <from> <to> <kind> --confirm|evidence <person> [item]|evidence-add <person> <item> <kind> <ref> [sha256]|export-all [out]|prune-audit [days]|tombstones|relations <person> [asOfMs]|merge <primary> <merged> --confirm|unmerge <id>|merges <person>|feedback <person> <id> <confirm|deny|irrelevant|correct> [text]|feedback-list <person>|decay <person> [days]|consolidate <person>|forget <person> <id>|delete <person> --confirm|audit <person> [limit]');
     process.exit(2);
   }
 } finally {

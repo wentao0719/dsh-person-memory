@@ -329,3 +329,15 @@ test('evidence metadata attaches to an item and is exported/deleted with person'
   core.deletePerson(db, 'urn:person:qq:9');
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM memory_evidence').get().n, 0);
 });
+
+test('relation candidates only resolve known persons and never auto-write', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:1', displayName: 'A', aliases: ['小A'] });
+  core.ensurePerson(db, { id: 'urn:person:qq:2', displayName: 'B' });
+  core.ensurePerson(db, { id: 'urn:person:qq:3', displayName: 'C' });
+  const out = core.extractRelationCandidates(db, 'A是B的朋友，小A和C是同事，D是B的朋友');
+  assert.equal(out.candidates.length, 2);
+  assert.deepEqual(out.candidates.map((c) => c.kind).sort(), ['colleague', 'friend']);
+  assert.equal(out.unresolved.length, 1);
+  assert.equal(core.listRelations(db, 'urn:person:qq:1').length, 0);
+});
