@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.27] - 2026-11-06
+
+### Added
+
+- Pending relation candidates table and approve/reject APIs.
+- CLI `relation-pending`, `relation-approve`, `relation-reject`.
+- AstrBot queues explicit relation statements as pending; never auto-writes.
+- 39 tests.
+
 ## [0.1.26] - 2026-11-06
 
 ### Added

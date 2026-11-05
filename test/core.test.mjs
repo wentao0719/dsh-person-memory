@@ -380,3 +380,17 @@ test('merge preview token is required when supplied and expires', (t) => {
   const again = core.mergePersons(db, { primaryPersonId: 'urn:person:qq:1', mergedPersonId: 'urn:person:qq:2', consent: true, previewToken: preview.token });
   assert.equal(again.ok, false);
 });
+
+test('relation candidates can be approved or rejected without auto-write', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:1', displayName: 'A' });
+  core.ensurePerson(db, { id: 'urn:person:qq:2', displayName: 'B' });
+  db.prepare("INSERT INTO relation_candidates(from_person_id,to_person_id,kind,evidence,source_channel,status,created_at,updated_at) VALUES(?,?,?,?,?,'pending',?,?)")
+    .run('urn:person:qq:1', 'urn:person:qq:2', 'friend', 'A是B的朋友', 'test', Date.now(), Date.now());
+  const pending = core.listRelationCandidates(db);
+  assert.equal(pending.length, 1);
+  assert.equal(core.listRelations(db, 'urn:person:qq:1').length, 0);
+  assert.equal(core.approveRelationCandidate(db, pending[0].id).ok, true);
+  assert.equal(core.listRelations(db, 'urn:person:qq:1').length, 1);
+  assert.equal(core.listRelationCandidates(db).length, 0);
+});
