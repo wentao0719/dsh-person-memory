@@ -394,3 +394,11 @@ test('relation candidates can be approved or rejected without auto-write', (t) =
   assert.equal(core.listRelations(db, 'urn:person:qq:1').length, 1);
   assert.equal(core.listRelationCandidates(db).length, 0);
 });
+
+test('evidence can carry OCR text', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  const item = core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：A' });
+  core.attachEvidence(db, { personId: 'urn:person:qq:9', itemId: item.item.id, kind: 'image', ref: 'x', ocrText: 'Hello 2026' });
+  assert.equal(core.listEvidence(db, 'urn:person:qq:9')[0].ocr_text, 'Hello 2026');
+});
