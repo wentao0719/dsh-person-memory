@@ -158,3 +158,28 @@ test('deletePerson removes person, items and audit atomically', (t) => {
   assert.equal(core.auditLog(db, { personId: 'urn:person:qq:9' }).length, 0);
   assert.equal(core.deletePerson(db, 'urn:person:qq:9').deleted, false);
 });
+
+test('fact conflicts supersede by label, preferences do not', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  const first = core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：A' });
+  const second = core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：B' });
+  assert.equal(first.status, 'created');
+  assert.equal(second.status, 'superseded');
+  const active = core.listItems(db, 'urn:person:qq:9');
+  assert.deepEqual(active.map((item) => item.text), ['住在：B']);
+  const tea = core.remember(db, { personId: 'urn:person:qq:9', kind: 'preference', text: '喜欢：茶' });
+  const coffee = core.remember(db, { personId: 'urn:person:qq:9', kind: 'preference', text: '喜欢：咖啡' });
+  assert.equal(tea.status, 'created');
+  assert.equal(coffee.status, 'created');
+});
+
+test('active items are capped per person without touching core', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  for (let i = 0; i < 15; i += 1) {
+    core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: `标签${i}：值${i}`, maxItemsPerPerson: 10 });
+  }
+  const active = core.listItems(db, 'urn:person:qq:9');
+  assert.equal(active.length, 10);
+});

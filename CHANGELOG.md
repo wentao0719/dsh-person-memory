@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-11-06
+
+### Added
+
+- Per-person active item cap (default 500, env `PERSON_MEMORY_MAX_ITEMS`);
+  oldest low-importance learned items are soft-forgotten with an audit row.
+- Same-label `fact` conflicts now supersede by default (e.g. 住在 A → 住在 B),
+  while preferences remain non-exclusive.
+- 19 tests.
+
 ## [0.1.4] - 2026-11-06
 
 ### Added
