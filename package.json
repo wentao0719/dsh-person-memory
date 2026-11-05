@@ -31,5 +31,14 @@
   },
   "scripts": {
     "test": "node --test test/*.test.mjs"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wentao0719/dsh-person-memory.git"
+  },
+  "homepage": "https://github.com/wentao0719/dsh-person-memory#readme",
+  "bugs": {
+    "url": "https://github.com/wentao0719/dsh-person-memory/issues"
+  },
+  "author": "wentao0719"
 }
