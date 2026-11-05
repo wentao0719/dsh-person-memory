@@ -46,7 +46,8 @@ const page = `<!doctype html><html lang="zh"><meta charset="utf-8"><title>人物
 <button onclick="merge()">合并</button>
 <button onclick="unmerge()">撤销合并</button>
 <button onclick="graph()">关系图</button>
-<ul id="list"></ul><div id="graph"></div><pre id="out"></pre>
+<button onclick="dashboard()">仪表盘</button>
+<div id="dash"></div><ul id="list"></ul><div id="graph"></div><pre id="out"></pre>
 <script>
 const $=s=>document.querySelector(s); let token=sessionStorage.getItem('memtok')||'';
 $('#token').value=token;
@@ -64,9 +65,35 @@ async function merge(){const primary=prompt('primary person id');if(!primary)ret
 async function unmerge(){const id=prompt('merge id');if(!id)return;try{$('#out').textContent=JSON.stringify(await api('/api/unmerge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:Number(id)})}),null,2);}catch(e){$('#out').textContent=e.message}}
 async function graph(){const id=prompt('中心 person id（留空显示全部）')||'';try{const v=await api('/api/graph?id='+encodeURIComponent(id)+'&depth=2');$('#out').textContent=JSON.stringify(v,null,2);renderGraph(v);}catch(e){$('#out').textContent=e.message}}
 function renderGraph(v){const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));const w=760,h=460,cx=w/2,cy=h/2,r=Math.min(cx,cy)-60;const n=v.nodes.length||1;const pos=new Map();v.nodes.forEach((node,i)=>{const a=(Math.PI*2*i)/n-Math.PI/2;pos.set(node.id,{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)});});let svg='<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" style="background:#fafafa;border-radius:8px">';for(const e of v.edges){const a=pos.get(e.from),b=pos.get(e.to);if(a&&b)svg+='<line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="#aaa"/><text x="'+((a.x+b.x)/2)+'" y="'+((a.y+b.y)/2)+'" font-size="10" fill="#666">'+esc(e.kind)+'</text>';}for(const node of v.nodes){const pnt=pos.get(node.id);svg+='<circle cx="'+pnt.x+'" cy="'+pnt.y+'" r="18" fill="#4a90e2"/><text x="'+pnt.x+'" y="'+(pnt.y+4)+'" text-anchor="middle" font-size="10" fill="#fff">'+esc(node.name).slice(0,8)+'</text>';}svg+='</svg>';$('#graph').innerHTML=svg;}
+async function dashboard(){try{const v=await api('/api/dashboard');$('#out').textContent=JSON.stringify(v,null,2);$('#dash').innerHTML='<pre>'+JSON.stringify(v,null,2)+'</pre>';}catch(e){$('#out').textContent=e.message}}
 async function del(id){const c=prompt('硬删除 '+id+' 的全部记忆。输入 DELETE 确认：');if(c!=='DELETE')return;try{$('#out').textContent=JSON.stringify(await api('/api/delete',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({person:id,confirm:'DELETE'})}),null,2);load();}catch(e){$('#out').textContent=e.message}}
 if(token)load();
 </script></html>`;
+
+function metricsSummary(path) {
+  let rows = [];
+  try {
+    rows = readFileSync(path, 'utf8').split('\n').filter(Boolean).map((line) => {
+      try { return JSON.parse(line); } catch { return null; }
+    }).filter(Boolean);
+  } catch { rows = []; }
+  const by = {};
+  for (const row of rows) {
+    const entry = by[row.name] ??= { count: 0, ms: [] };
+    entry.count += 1;
+    if (Number.isFinite(row.ms)) entry.ms.push(row.ms);
+  }
+  for (const entry of Object.values(by)) {
+    entry.ms.sort((a, b) => a - b);
+    entry.p50 = entry.ms.length ? entry.ms[Math.floor(entry.ms.length * 0.5)] : null;
+    entry.p95 = entry.ms.length ? entry.ms[Math.min(entry.ms.length - 1, Math.floor(entry.ms.length * 0.95))] : null;
+    delete entry.ms;
+  }
+  return { events: rows.length, by };
+}
+
+const metricsPath = process.env.PERSON_MEMORY_METRICS
+  || '/Users/wentaohu/dsh-bootstrap-20261102/state/logs/person-memory-metrics.jsonl';
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -102,6 +129,9 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'POST' && url.pathname === '/api/feedback') {
         const b = await body(req);
         return send(res, 200, applyFeedback(db, { personId: String(b.person || ''), itemId: Number(b.id), action: String(b.action || ''), text: b.text, actor: 'memory-ui' }));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/dashboard') {
+        return send(res, 200, { stats: stats(db), metrics: metricsSummary(metricsPath) });
       }
       if (req.method === 'GET' && url.pathname === '/api/graph') {
         return send(res, 200, relationGraph(db, {
