@@ -3,7 +3,7 @@ import http from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, recallTrace, listRelations, extractRelationCandidates, upsertRelation } from '../lib/core.js';
+import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, recallTrace, listRelations, extractRelationCandidates, upsertRelation, applyFeedback } from '../lib/core.js';
 
 const ROOT = '/Users/wentaohu/dsh-bootstrap-20261102';
 const dbPath = process.env.PERSON_MEMORY_DB || `${ROOT}/state/person-memory.sqlite`;
@@ -42,6 +42,7 @@ const page = `<!doctype html><html lang="zh"><meta charset="utf-8"><title>人物
 <button onclick="trace()">召回 trace</button>
 <button onclick="relationCandidates()">关系候选</button>
 <button onclick="addRelation()">加关系</button>
+<button onclick="feedback()">反馈</button>
 <ul id="list"></ul><pre id="out"></pre>
 <script>
 const $=s=>document.querySelector(s); let token=sessionStorage.getItem('memtok')||'';
@@ -55,6 +56,7 @@ async function exp(id){try{const r=await fetch('/api/export?id='+encodeURICompon
 async function rels(id){try{const v=await api('/api/relations?id='+encodeURIComponent(id));$('#out').textContent=JSON.stringify(v,null,2);}catch(e){$('#out').textContent=e.message}}
 async function relationCandidates(){const text=prompt('输入明确关系句，例如 A是B的朋友');if(!text)return;try{const v=await api('/api/relation-candidates?text='+encodeURIComponent(text));$('#out').textContent=JSON.stringify(v,null,2);}catch(e){$('#out').textContent=e.message}}
 async function addRelation(){const from=prompt('from person id');const to=prompt('to person id');const kind=prompt('kind (friend/partner/colleague/family/roommate/classmate)');if(!from||!to||!kind)return;try{$('#out').textContent=JSON.stringify(await api('/api/relation-add',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({from,to,kind})}),null,2);}catch(e){$('#out').textContent=e.message}}
+async function feedback(){const person=prompt('person id');if(!person)return;const id=prompt('item id');if(!id)return;const action=prompt('confirm|deny|irrelevant|correct');if(!action)return;const text=action==='correct'?(prompt('新文本')||''):undefined;try{$('#out').textContent=JSON.stringify(await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({person,id:Number(id),action,text})}),null,2);}catch(e){$('#out').textContent=e.message}}
 async function del(id){const c=prompt('硬删除 '+id+' 的全部记忆。输入 DELETE 确认：');if(c!=='DELETE')return;try{$('#out').textContent=JSON.stringify(await api('/api/delete',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({person:id,confirm:'DELETE'})}),null,2);load();}catch(e){$('#out').textContent=e.message}}
 if(token)load();
 </script></html>`;
@@ -89,6 +91,10 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'POST' && url.pathname === '/api/relation-add') {
         const b = await body(req);
         return send(res, 200, upsertRelation(db, { fromPersonId: String(b.from || ''), toPersonId: String(b.to || ''), kind: String(b.kind || 'friend'), evidence: 'memory-ui' }));
+      }
+      if (req.method === 'POST' && url.pathname === '/api/feedback') {
+        const b = await body(req);
+        return send(res, 200, applyFeedback(db, { personId: String(b.person || ''), itemId: Number(b.id), action: String(b.action || ''), text: b.text, actor: 'memory-ui' }));
       }
       if (req.method === 'GET' && url.pathname === '/api/export') {
         const id = url.searchParams.get('id') || '';
