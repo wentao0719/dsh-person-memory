@@ -341,3 +341,17 @@ test('relation candidates only resolve known persons and never auto-write', (t) 
   assert.equal(out.unresolved.length, 1);
   assert.equal(core.listRelations(db, 'urn:person:qq:1').length, 0);
 });
+
+test('relation graph traverses depth from center', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:1', displayName: 'A' });
+  core.ensurePerson(db, { id: 'urn:person:qq:2', displayName: 'B' });
+  core.ensurePerson(db, { id: 'urn:person:qq:3', displayName: 'C' });
+  core.upsertRelation(db, { fromPersonId: 'urn:person:qq:1', toPersonId: 'urn:person:qq:2', kind: 'friend' });
+  core.upsertRelation(db, { fromPersonId: 'urn:person:qq:2', toPersonId: 'urn:person:qq:3', kind: 'colleague' });
+  const one = core.relationGraph(db, { centerPersonId: 'urn:person:qq:1', depth: 1 });
+  assert.deepEqual(one.nodes.map((n) => n.id).sort(), ['urn:person:qq:1', 'urn:person:qq:2']);
+  const two = core.relationGraph(db, { centerPersonId: 'urn:person:qq:1', depth: 2 });
+  assert.equal(two.nodes.length, 3);
+  assert.equal(two.edges.length, 2);
+});
