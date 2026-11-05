@@ -305,3 +305,14 @@ test('metrics record recall without person text', async (t) => {
   assert.ok(snap.recent.some((event) => event.name === 'recall' && event.ms >= 0));
   assert.equal(JSON.stringify(snap).includes('住在'), false);
 });
+
+test('recallTrace exposes score, source and visibility', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：A', source: { channel: 'unit' } });
+  const trace = core.recallTrace(db, { personId: 'urn:person:qq:9', queryText: 'A', audience: 'private' });
+  assert.equal(trace.audience, 'private');
+  assert.equal(trace.items[0].text, '住在：A');
+  assert.equal(trace.items[0].sourceChannel, 'unit');
+  assert.equal(typeof trace.items[0].score, 'number');
+});
