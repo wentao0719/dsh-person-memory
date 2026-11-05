@@ -254,3 +254,17 @@ test('decay lowers old importance; consolidation removes exact duplicates', (t) 
     .run('urn:person:qq:9', 'fact', '重复：A', '重复a', 0.7, 0.5, 'private', '[]', 'learned', Date.now(), Date.now());
   assert.equal(core.consolidatePerson(db, { personId: 'urn:person:qq:9' }).merged, 1);
 });
+
+test('person merge expands recall, requires consent and is reversible', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:1', displayName: 'A' });
+  core.ensurePerson(db, { id: 'urn:person:qq:2', displayName: 'B' });
+  core.remember(db, { personId: 'urn:person:qq:2', kind: 'fact', text: '住在：B城' });
+  assert.equal(core.mergePersons(db, { primaryPersonId: 'urn:person:qq:1', mergedPersonId: 'urn:person:qq:2' }).ok, false);
+  const merged = core.mergePersons(db, { primaryPersonId: 'urn:person:qq:1', mergedPersonId: 'urn:person:qq:2', consent: true });
+  assert.equal(merged.ok, true);
+  assert.equal(core.recall(db, { personId: 'urn:person:qq:1' }).length, 1);
+  assert.equal(core.mergePersons(db, { primaryPersonId: 'urn:person:qq:1', mergedPersonId: 'urn:person:qq:2', consent: true }).ok, false);
+  assert.equal(core.revertMerge(db, merged.id).ok, true);
+  assert.equal(core.recall(db, { personId: 'urn:person:qq:1' }).length, 0);
+});
