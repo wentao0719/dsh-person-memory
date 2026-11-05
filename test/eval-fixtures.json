@@ -1,0 +1,21 @@
+{
+  "persons": [
+    {"id": "urn:person:qq:1", "displayName": "eval-A"},
+    {"id": "urn:person:qq:2", "displayName": "eval-B"}
+  ],
+  "items": [
+    {"person": "urn:person:qq:1", "kind": "preference", "text": "喜欢：手冲咖啡", "visibility": "private"},
+    {"person": "urn:person:qq:1", "kind": "fact", "text": "住在：温哥华", "visibility": "private"},
+    {"person": "urn:person:qq:1", "kind": "fact", "text": "宠物：猫", "visibility": "public", "audiences": ["group:101"]},
+    {"person": "urn:person:qq:1", "kind": "fact", "text": "工作：设计师", "visibility": "public", "audiences": ["group:202"]},
+    {"person": "urn:person:qq:1", "kind": "preference", "text": "不喜欢：香菜", "visibility": "private"},
+    {"person": "urn:person:qq:2", "kind": "fact", "text": "住在：东京", "visibility": "private"}
+  ],
+  "queries": [
+    {"person": "urn:person:qq:1", "audience": "private", "query": "咖啡", "expected": "喜欢：手冲咖啡"},
+    {"person": "urn:person:qq:1", "audience": "private", "query": "温哥华", "expected": "住在：温哥华"},
+    {"person": "urn:person:qq:1", "audience": "group", "audienceKey": "group:101", "query": "猫", "expected": "宠物：猫"},
+    {"person": "urn:person:qq:1", "audience": "group", "audienceKey": "group:101", "query": "咖啡", "expected": null},
+    {"person": "urn:person:qq:1", "audience": "group", "audienceKey": "group:202", "query": "设计师", "expected": "工作：设计师"}
+  ]
+}

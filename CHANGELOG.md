@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.12] - 2026-11-06
+
+### Added
+
+- Synthetic local recall eval: recall@k and hard group-privacy leak gate.
+- `npm run eval`; fixtures never touch real friend memory.
+- CI remains unit-test only; eval is a separate regression gate.
+
 ## [0.1.11] - 2026-11-06
 
 ### Added
