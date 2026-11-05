@@ -203,3 +203,26 @@ test('local embedding is deterministic and cosine-safe', async (t) => {
   assert.ok(cosine(a, b) > 0.999);
   assert.equal(a.length, 256);
 });
+
+test('as-of recall respects valid_from/valid_until', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:9', displayName: 'nine' });
+  const base = Date.now();
+  core.remember(db, { personId: 'urn:person:qq:9', kind: 'fact', text: '住在：A', validFrom: base + 10000, validUntil: base + 20000 });
+  assert.equal(core.recall(db, { personId: 'urn:person:qq:9', asOf: base }).length, 0);
+  assert.equal(core.recall(db, { personId: 'urn:person:qq:9', asOf: base + 15000 }).length, 1);
+  assert.equal(core.recall(db, { personId: 'urn:person:qq:9', asOf: base + 25000 }).length, 0);
+});
+
+test('relations support as-of and deletion', (t) => {
+  const db = makeStore(t);
+  core.ensurePerson(db, { id: 'urn:person:qq:1', displayName: 'A' });
+  core.ensurePerson(db, { id: 'urn:person:qq:2', displayName: 'B' });
+  const rel = core.upsertRelation(db, { fromPersonId: 'urn:person:qq:1', toPersonId: 'urn:person:qq:2', kind: 'friend', since: 1000 });
+  assert.ok(rel);
+  assert.equal(core.listRelations(db, 'urn:person:qq:1', { asOf: 500 }).length, 0);
+  assert.equal(core.listRelations(db, 'urn:person:qq:1', { asOf: 2000 }).length, 1);
+  assert.equal(core.listRelations(db, 'urn:person:qq:2', { asOf: 2000 }).length, 1);
+  assert.equal(core.deleteRelation(db, rel.id), true);
+  assert.equal(core.listRelations(db, 'urn:person:qq:1', { asOf: 2000 }).length, 0);
+});

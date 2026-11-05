@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, auditLog } from '../lib/core.js';
+import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, auditLog, listRelations } from '../lib/core.js';
 import { writeFileSync } from 'node:fs';
 
 const args = process.argv.slice(2);
@@ -30,10 +30,12 @@ try {
   } else if (cmd === 'delete') {
     if (!args.includes('--confirm')) throw new Error('delete requires --confirm');
     console.log(JSON.stringify(deletePerson(db, args[1])));
+  } else if (cmd === 'relations') {
+    console.log(JSON.stringify(listRelations(db, args[1], { asOf: args[2] ? Number(args[2]) : undefined }), null, 2));
   } else if (cmd === 'audit') {
     console.log(JSON.stringify(auditLog(db, { personId: args[1], limit: Number(args[2] || 100) }), null, 2));
   } else {
-    console.error('usage: memory-admin.mjs stats|list|show <person>|export <person> [out]|forget <person> <id>|delete <person> --confirm|audit <person> [limit]');
+    console.error('usage: memory-admin.mjs stats|list|show <person>|export <person> [out]|relations <person> [asOfMs]|forget <person> <id>|delete <person> --confirm|audit <person> [limit]');
     process.exit(2);
   }
 } finally {
