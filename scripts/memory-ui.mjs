@@ -3,7 +3,7 @@ import http from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, recallTrace, listRelations, extractRelationCandidates, upsertRelation, listRelationCandidates, approveRelationCandidate, rejectRelationCandidate, applyFeedback, mergePersons, previewMerge, revertMerge, listMerges, relationGraph } from '../lib/core.js';
+import { openStore, stats, listItems, getPerson, exportPerson, deletePerson, forget, recallTrace, listEvidence, listRelations, extractRelationCandidates, upsertRelation, listRelationCandidates, approveRelationCandidate, rejectRelationCandidate, listEvidenceCandidates, approveEvidenceCandidate, rejectEvidenceCandidate, applyFeedback, mergePersons, previewMerge, revertMerge, listMerges, relationGraph } from '../lib/core.js';
 
 const ROOT = '/Users/wentaohu/dsh-bootstrap-20261102';
 const dbPath = process.env.PERSON_MEMORY_DB || `${ROOT}/state/person-memory.sqlite`;
@@ -43,6 +43,7 @@ const page = `<!doctype html><html lang="zh"><meta charset="utf-8"><title>人物
 <button onclick="relationCandidates()">关系候选</button>
 <button onclick="addRelation()">加关系</button>
 <button onclick="pendingRelations()">待审关系</button>
+<button onclick="pendingEvidence()">待审证据</button>
 <button onclick="feedback()">反馈</button>
 <button onclick="merge()">合并</button>
 <button onclick="unmerge()">撤销合并</button>
@@ -70,6 +71,9 @@ async function dashboard(){try{const v=await api('/api/dashboard');$('#out').tex
 async function pendingRelations(){try{const rows=await api('/api/relation-pending');const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));$('#out').textContent=JSON.stringify(rows,null,2);$('#dash').innerHTML=rows.length?('<ul>'+rows.map(r=>'<li>#'+r.id+' '+esc(r.from_person_id)+' → '+esc(r.to_person_id)+' ['+esc(r.kind)+'] <button onclick="approveRel('+r.id+')">通过</button><button onclick="rejectRel('+r.id+')">拒绝</button></li>').join('')+'</ul>'):'<p class="muted">没有 pending 候选</p>';}catch(e){$('#out').textContent=e.message}}
 async function approveRel(id){try{await api('/api/relation-approve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id})});pendingRelations();}catch(e){$('#out').textContent=e.message}}
 async function rejectRel(id){try{await api('/api/relation-reject',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id})});pendingRelations();}catch(e){$('#out').textContent=e.message}}
+async function pendingEvidence(){try{const rows=await api('/api/evidence-pending');const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));$('#out').textContent=JSON.stringify(rows,null,2);$('#dash').innerHTML=rows.length?('<ul>'+rows.map(r=>'<li>#'+r.id+' '+esc(r.person_id)+' '+esc(r.media_type||'')+' sha='+esc((r.sha256||'').slice(0,12))+' <button onclick="approveEv('+r.id+')">指定 item</button><button onclick="rejectEv('+r.id+')">拒绝</button></li>').join('')+'</ul>'):'<p class="muted">没有 pending 证据</p>';}catch(e){$('#out').textContent=e.message}}
+async function approveEv(id){const item=prompt('attach 到哪个 memory item id?');if(!item)return;try{$('#out').textContent=JSON.stringify(await api('/api/evidence-approve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,item:Number(item)})}),null,2);pendingEvidence();}catch(e){$('#out').textContent=e.message}}
+async function rejectEv(id){try{$('#out').textContent=JSON.stringify(await api('/api/evidence-reject',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id})}),null,2);pendingEvidence();}catch(e){$('#out').textContent=e.message}}
 async function del(id){const c=prompt('硬删除 '+id+' 的全部记忆。输入 DELETE 确认：');if(c!=='DELETE')return;try{$('#out').textContent=JSON.stringify(await api('/api/delete',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({person:id,confirm:'DELETE'})}),null,2);load();}catch(e){$('#out').textContent=e.message}}
 if(token)load();
 </script></html>`;
@@ -113,7 +117,7 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'GET' && url.pathname === '/api/person') {
         const id = url.searchParams.get('id') || '';
-        return send(res, 200, { person: getPerson(db, id), items: listItems(db, id, { statuses: ['active', 'superseded', 'forgotten', 'quarantined', 'pending_review', 'rejected'] }) });
+        return send(res, 200, { person: getPerson(db, id), items: listItems(db, id, { statuses: ['active', 'superseded', 'forgotten', 'quarantined', 'pending_review', 'rejected'] }), evidence: listEvidence(db, id) });
       }
       if (req.method === 'GET' && url.pathname === '/api/trace') {
         const id = url.searchParams.get('id') || '';
@@ -125,6 +129,17 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'GET' && url.pathname === '/api/relation-candidates') {
         return send(res, 200, extractRelationCandidates(db, url.searchParams.get('text') || ''));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/evidence-pending') {
+        return send(res, 200, listEvidenceCandidates(db, { status: url.searchParams.get('status') || 'pending', limit: 100 }));
+      }
+      if (req.method === 'POST' && url.pathname === '/api/evidence-approve') {
+        const b = await body(req);
+        return send(res, 200, approveEvidenceCandidate(db, Number(b.id), { itemId: Number(b.item), actor: 'memory-ui' }));
+      }
+      if (req.method === 'POST' && url.pathname === '/api/evidence-reject') {
+        const b = await body(req);
+        return send(res, 200, rejectEvidenceCandidate(db, Number(b.id), { actor: 'memory-ui' }));
       }
       if (req.method === 'GET' && url.pathname === '/api/relation-pending') {
         return send(res, 200, listRelationCandidates(db, { status: url.searchParams.get('status') || 'pending', limit: 100 }));
